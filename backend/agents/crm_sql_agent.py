@@ -189,10 +189,19 @@ Corrected SQL:"""
         self._last_validation_error = None
         if not sql:
             return None
-        forbidden = ["INSERT", "UPDATE", "DELETE", "DROP", "TRUNCATE", "CREATE", "ALTER", "GRANT"]
+        sql = sql.strip()
         sql_upper = sql.upper()
+        if not re.match(r"^\s*SELECT\b", sql, re.IGNORECASE):
+            self._last_validation_error = "Only SELECT statements are allowed"
+            logger.warning("[CRM SQL] Blocked non-SELECT SQL")
+            return None
+        if ";" in sql.rstrip(";"):
+            self._last_validation_error = "Multiple SQL statements are not allowed"
+            logger.warning("[CRM SQL] Blocked multiple SQL statements")
+            return None
+        forbidden = ["INSERT", "UPDATE", "DELETE", "DROP", "TRUNCATE", "CREATE", "ALTER", "GRANT"]
         for keyword in forbidden:
-            if keyword in sql_upper:
+            if re.search(rf"\b{keyword}\b", sql_upper):
                 logger.warning("[CRM SQL] Blocked dangerous SQL keyword: {}", keyword)
                 return None
         validation_error = self._validate_columns(sql)

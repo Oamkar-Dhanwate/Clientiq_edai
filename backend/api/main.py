@@ -26,21 +26,21 @@ from backend.api.routes_admin import router as admin_router
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown lifecycle hooks."""
-    logger.info("╔══════════════════════════════════════╗")
-    logger.info("║     ClientIQ API Starting...          ║")
-    logger.info("╚══════════════════════════════════════╝")
+    logger.info("========================================")
+    logger.info("ClientIQ API Starting...")
+    logger.info("========================================")
 
     # Verify database connectivity
     from backend.database.connection import check_db_connection
     db_ok = await check_db_connection()
     if not db_ok:
-        logger.warning("TiDB connection unavailable — running in degraded mode")
+        logger.warning("TiDB connection unavailable - running in degraded mode")
 
     # Verify hosted LLM
     from backend.services.mistral_client import MistralClient
     llm_ok = MistralClient().health_check()
     if not llm_ok:
-        logger.warning("Mistral API not reachable or MISTRAL_API_KEY is missing - LLM features unavailable")
+        logger.warning("{} API not reachable or API key is missing - LLM features unavailable", settings.llm_provider)
 
     logger.info("ClientIQ API ready | env={}", settings.app_env)
     yield
@@ -76,7 +76,7 @@ async def request_timing(request: Request, call_next):
     start = time.perf_counter()
     response = await call_next(request)
     duration = (time.perf_counter() - start) * 1000
-    logger.debug("{} {} → {} ({:.1f}ms)", request.method, request.url.path, response.status_code, duration)
+    logger.debug("{} {} -> {} ({:.1f}ms)", request.method, request.url.path, response.status_code, duration)
     response.headers["X-Process-Time"] = f"{duration:.1f}ms"
     return response
 

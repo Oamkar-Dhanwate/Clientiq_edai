@@ -61,6 +61,7 @@ SENSITIVE_PATTERNS = [
     (r"\bssn\b|\bsocial security\b", "SSN data access", "read_pii"),
     (r"\bcredit card\b|\bpayment card\b", "Payment card data", "read_pii"),
     (r"\bpassword\b|\bcredential\b", "Credential access", "admin"),
+    (r"\bignore previous instructions\b|\breveal hidden\b|\bsystem prompt\b|\bdeveloper message\b", "Prompt injection attempt", "admin"),
     (r"\bsalary\b|\bcompensation\b", "Employee compensation", "read_financials"),
     (r"\bexport all\b|\bdump all\b|\bextract all\b", "Mass data export", "export_data"),
     (r"\baudit log\b|\baccess log\b", "Audit log access", "read_audit_logs"),
@@ -126,7 +127,7 @@ class ComplianceAgent:
 
         if blocked:
             state["final_response"] = (
-                "⛔ Access Denied: Your role does not have permission to access this information. "
+                "Access Denied: Your role does not have permission to access this information. "
                 f"Please contact your administrator. Details: {'; '.join(flags)}"
             )
             state["completed"] = True

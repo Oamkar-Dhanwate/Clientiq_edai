@@ -4,8 +4,8 @@
 # ClientIQ — Enterprise Multi-Agent Hybrid RAG Intelligence Platform
 
 ![ClientIQ](https://img.shields.io/badge/ClientIQ-v1.0.0-388bfd?style=flat-square)
-![Python](https://img.shields.io/badge/Python-3.11+-blue?style=flat-square)
-![LangGraph](https://img.shields.io/badge/LangGraph-0.1.0-green?style=flat-square)
+![Python](https://img.shields.io/badge/Python-3.10+-blue?style=flat-square)
+![LangGraph](https://img.shields.io/badge/LangGraph-0.1.1-green?style=flat-square)
 ![FastAPI](https://img.shields.io/badge/FastAPI-0.111-teal?style=flat-square)
 ![License](https://img.shields.io/badge/License-MIT-gray?style=flat-square)
 
@@ -60,7 +60,7 @@ User Query
     └─────────────┘           └─────────────┘
            │                         │
     ┌──────▼──────────────────────────▼──────┐
-    │              Mistral AI API             │
+    │              Groq LLM API               │
     └────────────────────────────────────────┘
 ```
 
@@ -72,8 +72,8 @@ User Query
 
 | Tool | Version | Install |
 |------|---------|---------|
-| Python | 3.11+ | [python.org](https://python.org) |
-| Mistral AI | API key | [console.mistral.ai](https://console.mistral.ai) |
+| Python | 3.10+ | [python.org](https://python.org) |
+| Groq | API key | [console.groq.com](https://console.groq.com) |
 | TiDB | Cloud/Local | [tidbcloud.com](https://tidbcloud.com) |
 | Pinecone | Account | [pinecone.io](https://pinecone.io) |
 
@@ -88,6 +88,8 @@ source .venv/bin/activate        # Windows: .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
+For exact reproduction of the verified local environment, install from `requirements.lock` instead.
+
 ### 2. Configure Environment
 
 ```bash
@@ -95,13 +97,13 @@ cp .env.example .env
 # Edit .env with your credentials:
 # TIDB_HOST, TIDB_USER, TIDB_PASSWORD
 # PINECONE_API_KEY
-# MISTRAL_API_KEY
+# GROQ_API_KEY
 ```
 
-### 3. Set Up Mistral AI
+### 3. Set Up Groq
 
-Create an API key in the Mistral AI console and set `MISTRAL_API_KEY` in `.env`.
-The default hosted model is `mistral-small-latest`.
+Create an API key in the Groq console and set `GROQ_API_KEY` in `.env`.
+The default hosted model is `llama-3.1-8b-instant`.
 
 ### 4. Set Up TiDB Database
 
@@ -172,7 +174,7 @@ clientiq/
 │   ├── api/             # FastAPI routes (6 routers)
 │   ├── database/        # TiDB schema, ORM models, connection
 │   ├── rag/             # Chunker, Embedder, Pinecone store, Hybrid retriever
-│   ├── services/        # Mistral client, Auth, Audit, Graph
+│   ├── services/        # LLM client, Auth, Audit, Graph
 │   ├── ml/              # Churn model, Sentiment model
 │   └── utils/           # Config, Logger, Helpers
 ├── data_generation/     # Synthetic data + Pinecone indexer
@@ -203,6 +205,23 @@ clientiq/
 
 ---
 
+## Project Continuation Docs
+
+Use these before adding new ClientIQ 2.0 work:
+
+| File | Purpose |
+|------|---------|
+| `docs/PROJECT_CONTINUATION_GUIDE.md` | roadmap crosswalk, execution gates, and next work order |
+| `docs/SRS.md` | software requirements matched to the 2.0 TODO |
+| `docs/PREREQUISITES.md` | all setup prerequisites and environment variables |
+| `docs/PROMPT_PIPELINE.md` | canonical prompt and agent pipeline |
+| `docs/SKILLS_AND_AGENTS.md` | required skills, agent inventory, and OOP rules |
+| `docs/VERSION_SYNC.md` | synchronized version, model, and dependency contract |
+| `docs/GOVERNANCE_AND_OPERATIONS.md` | security, data/model governance, audit, observability, approvals, recovery |
+| `docs/EVALUATION_AND_SUCCESS_METRICS.md` | RAG evaluation, KPI definitions, ML metrics, business success metrics |
+
+---
+
 ## API Reference
 
 | Method | Endpoint | Description |
@@ -226,7 +245,7 @@ Full interactive docs at `/api/docs`
 
 | Layer | Technology |
 |-------|------------|
-| LLM | Mistral AI API |
+| LLM | Groq API |
 | Agent Framework | LangChain + LangGraph |
 | Vector DB | Pinecone |
 | Relational DB | TiDB (MySQL-compatible) |

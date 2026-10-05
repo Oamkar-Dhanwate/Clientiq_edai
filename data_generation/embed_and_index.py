@@ -19,6 +19,7 @@ from backend.database.models import Email, Meeting, CallTranscript, SupportTicke
 from backend.rag.chunker import chunker
 from backend.rag.embedder import embedder
 from backend.rag.pinecone_store import pinecone_store
+from backend.utils.config import settings
 from backend.utils.logger import logger
 from sqlalchemy import select
 
@@ -139,15 +140,15 @@ def _chunk_embed_upsert(documents: List[Dict], label: str) -> int:
         })
 
     # 4. Upsert to Pinecone
-    upserted = pinecone_store.upsert(vectors, batch_size=100)
+    upserted = pinecone_store.upsert(vectors, batch_size=settings.pinecone_upsert_batch_size)
     logger.info("[Indexer] Upserted {} vectors for {}", upserted, label)
     return upserted
 
 
 async def main():
-    logger.info("╔══════════════════════════════════════════════╗")
-    logger.info("║  ClientIQ — Pinecone Indexer                  ║")
-    logger.info("╚══════════════════════════════════════════════╝")
+    logger.info("==============================================")
+    logger.info("ClientIQ Pinecone Indexer")
+    logger.info("==============================================")
 
     total = 0
     async with get_db_session() as session:
@@ -160,7 +161,7 @@ async def main():
     stats = pinecone_store.get_stats()
     logger.info("Indexing complete | total vectors upserted={}", total)
     logger.info("Pinecone index stats: {}", stats)
-    print(f"\n✓ Indexed {total} vectors into Pinecone")
+    print(f"\nIndexed {total} vectors into Pinecone")
     print(f"  Index: {pinecone_store.index_name}")
 
 

@@ -1,8 +1,8 @@
-# Mistral AI LLM runtime
+# LLM runtime
 """
-ClientIQ - Mistral AI LLM Client
-Wraps Mistral's hosted chat completions API with retry logic and a
-small interface used by the agents.
+ClientIQ - OpenAI-compatible LLM Client
+Wraps Groq or Mistral chat completions with retry logic and the small
+interface used by the agents.
 """
 
 from typing import List, Optional
@@ -16,7 +16,7 @@ from backend.utils.logger import logger
 
 class MistralClient:
     """
-    Client for Mistral AI's hosted chat completions API.
+    Backward-compatible client name for hosted, OpenAI-compatible LLM APIs.
 
     Supports:
     - Single completion (complete)
@@ -29,9 +29,19 @@ class MistralClient:
         api_key: Optional[str] = None,
         base_url: Optional[str] = None,
     ):
-        self.model = model or settings.mistral_model
-        self.api_key = api_key or settings.mistral_api_key
-        self.base_url = (base_url or settings.mistral_base_url).rstrip("/")
+        self.provider = settings.llm_provider.lower()
+        if self.provider == "groq":
+            default_model = settings.groq_model
+            default_api_key = settings.groq_api_key
+            default_base_url = settings.groq_base_url
+        else:
+            default_model = settings.mistral_model
+            default_api_key = settings.mistral_api_key
+            default_base_url = settings.mistral_base_url
+
+        self.model = model or default_model
+        self.api_key = api_key or default_api_key
+        self.base_url = (base_url or default_base_url).rstrip("/")
         self.timeout = 120.0
 
     @property
@@ -79,7 +89,7 @@ class MistralClient:
     ) -> str:
         """
         Multi-turn chat completion.
-        Builds message history in OpenAI-compatible format for Mistral.
+        Builds message history in OpenAI-compatible chat-completions format.
         """
         messages = []
         if system:
@@ -102,7 +112,8 @@ class MistralClient:
         stop: Optional[List[str]] = None,
     ) -> str:
         if not self.api_key:
-            raise ValueError("MISTRAL_API_KEY is not configured")
+            key_name = "GROQ_API_KEY" if self.provider == "groq" else "MISTRAL_API_KEY"
+            raise ValueError(f"{key_name} is not configured")
 
         payload = {
             "model": self.model,
@@ -125,10 +136,10 @@ class MistralClient:
                 data = response.json()
                 return self._extract_content(data)
         except httpx.TimeoutException:
-            logger.warning("[Mistral] Request timed out after {}s", self.timeout)
+            logger.warning("[LLM:{}] Request timed out after {}s", self.provider, self.timeout)
             return "LLM response timed out. Please try again."
         except Exception as e:
-            logger.error("[Mistral] Chat completion error: {}", e)
+            logger.error("[LLM:{}] Chat completion error: {}", self.provider, e)
             raise
 
     def _extract_content(self, data: dict) -> str:
@@ -151,7 +162,7 @@ class MistralClient:
         return ""
 
     def health_check(self) -> bool:
-        """Check if Mistral credentials can reach the hosted API."""
+        """Check if hosted LLM credentials can reach the provider API."""
         if not self.api_key:
             return False
 

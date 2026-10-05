@@ -5,6 +5,7 @@ Handles all interactions with Pinecone: index creation,
 upsert of embeddings, and filtered similarity search.
 """
 
+import time
 from typing import List, Dict, Any, Optional
 from backend.utils.config import settings
 from backend.utils.logger import logger
@@ -32,7 +33,7 @@ class PineconeStore:
             return self._index
         try:
             from pinecone import Pinecone, ServerlessSpec
-            pc = Pinecone(api_key=settings.pinecone_api_key)
+            pc = Pinecone(api_key=settings.pinecone_api_key, pool_threads=4)
 
             # Create index if it doesn't exist
             existing = [idx.name for idx in pc.list_indexes()]
@@ -44,9 +45,9 @@ class PineconeStore:
                     metric="cosine",
                     spec=ServerlessSpec(cloud="aws", region="us-east-1"),
                 )
-                logger.info("[Pinecone] Index created ✓")
+                logger.info("[Pinecone] Index created")
             else:
-                logger.info("[Pinecone] Index '{}' already exists ✓", self.index_name)
+                logger.info("[Pinecone] Index '{}' already exists", self.index_name)
 
             self._index = pc.Index(self.index_name)
             return self._index
@@ -58,7 +59,8 @@ class PineconeStore:
         self,
         vectors: List[Dict[str, Any]],
         namespace: str = "",
-        batch_size: int = 100,
+        batch_size: Optional[int] = None,
+        max_retries: int = 3,
     ) -> int:
         """
         Upsert a list of vectors into Pinecone.
@@ -72,6 +74,7 @@ class PineconeStore:
         """
         index = self._get_index()
         total = 0
+        batch_size = batch_size or settings.pinecone_upsert_batch_size
 
         for i in range(0, len(vectors), batch_size):
             batch = vectors[i: i + batch_size]
@@ -83,12 +86,48 @@ class PineconeStore:
                 }
                 for v in batch
             ]
-            try:
-                index.upsert(vectors=formatted, namespace=namespace)
-                total += len(batch)
-                logger.debug("[Pinecone] Upserted batch {}/{}", i + len(batch), len(vectors))
-            except Exception as e:
-                logger.error("[Pinecone] Upsert batch failed: {}", e)
+            batch_number = (i // batch_size) + 1
+            batch_total = (len(vectors) + batch_size - 1) // batch_size
+
+            for attempt in range(1, max_retries + 1):
+                try:
+                    logger.info(
+                        "[Pinecone] Upserting batch {}/{} | vectors={} | timeout={}s",
+                        batch_number,
+                        batch_total,
+                        len(batch),
+                        settings.pinecone_request_timeout,
+                    )
+                    index.upsert(
+                        vectors=formatted,
+                        namespace=namespace,
+                        _request_timeout=settings.pinecone_request_timeout,
+                    )
+                    total += len(batch)
+                    logger.info("[Pinecone] Upserted batch {}/{}", batch_number, batch_total)
+                    break
+                except Exception as e:
+                    if attempt >= max_retries:
+                        logger.error(
+                            "[Pinecone] Upsert batch {}/{} failed after {} attempts: {}",
+                            batch_number,
+                            batch_total,
+                            max_retries,
+                            e,
+                        )
+                        raise
+
+                    sleep_seconds = 2 * attempt
+                    logger.warning(
+                        "[Pinecone] Upsert batch {}/{} failed on attempt {}/{}: {}. Retrying in {}s",
+                        batch_number,
+                        batch_total,
+                        attempt,
+                        max_retries,
+                        e,
+                        sleep_seconds,
+                    )
+                    time.sleep(sleep_seconds)
 
         logger.info("[Pinecone] Total upserted: {}", total)
         return total
